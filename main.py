@@ -6,200 +6,184 @@ import numpy as np
 
 MAX_INT = 1000000000000000
 
-st.title("Company Total Compensation Calculator")
-
-# Add state income tax data later
-federal_income_tax_brackets = pd.DataFrame(
-    {"start": [0, 9875, 40125, 85525, 163300, 207350, 518400], 
-    "end": [9875, 40125, 85525, 163300, 207350, 518400, MAX_INT],
-    "tax_rate": [0.1, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37]}
-    )
+st.title("Should I Buy a House Calculator")
 
 
-base_salary = st.number_input(
-     "What is the base salary per year?",
-     min_value=0, max_value=MAX_INT, value=150000)
+property_tax_values = pd.DataFrame({
+    'Hawaii': [0.28],
+    'Alabama': [0.41],
+    'Colorado':	[0.51],
+    'Louisiana': [0.55],
+    'District of Columbia':	[0.56],
+    'South Carolina': [0.57],
+    'Delaware':	[0.57],
+    'West Virginia': [0.58],
+    'Nevada':	[0.60],
+	'Wyoming':	[0.61],
+	'Arkansas':	[0.62],
+	'Utah':	[0.63],
+	'Arizona':	[0.66],
+	'Idaho':	[0.69],
+	'Tennessee':	[0.71],
+	'California':	[0.76],
+	'New Mexico':	[0.80],
+	'Mississippi':	[0.81],
+	'Virginia':	[0.82],
+	'Montana':	[0.84],
+	'North Carolina': [0.84],
+	'Indiana':	[0.85],
+	'Kentucky':	[0.86],
+	'Florida':	[0.89],
+	'Oklahoma':	[0.90],
+	'Georgia':	[0.92],
+	'Missouri':	[0.97],
+	'Oregon':	[0.97],
+	'North Dakota':	[0.98],
+	'Washington':	[0.98],
+	'Maryland':	[1.09],
+	'Minnesota':	[1.12],
+	'Alaska':	[1.19],
+	'Massachusetts':	[1.23],
+	'South Dakota':	[1.31],
+	'Maine':	[1.36],
+	'Kansas':	[1.41],
+	'Michigan':	[1.54],
+	'Ohio':	[1.56],
+	'Iowa':	[1.57],
+	'Pennsylvania':	[1.58],
+	'Rhode Island':	[1.63],
+	'New York':	[1.72],
+	'Nebraska':	[1.73],
+	'Texas':	[1.80],
+	'Wisconsin':	[1.85],
+	'Vermont':	[1.90],
+	'Connecticut':	[2.14],
+	'New Hampshire':	[2.18],
+	'Illinois':	[2.27],
+	'New Jersey':	[2.49],
+})
+
+house_value = st.number_input(
+     "What is the value of the house (in dollars)?",
+     min_value=0, max_value=MAX_INT, value=1000000)
+
+downpayment = st.number_input(
+     "What is the downpayment for the house?",
+     min_value=0, max_value=MAX_INT, value=200000)
+
+loan_principal = st.number_input(
+     "How much money are you taking out a loan for?",
+     min_value=0, max_value=MAX_INT, value=800000)
+
+loan_interest_rate = st.number_input(
+     "What is the annual interest rate on the loan (assuming fixed)?",
+     min_value=0.0, max_value=1.0, value=0.04)
+
+loan_length = st.number_input(
+     "How long is the loan for (in years)?",
+     min_value=0, max_value=100, value=15)
     
-annual_bonus = st.number_input(
-     "What is the annual bonus?",
-     min_value=0, max_value=MAX_INT, value=0)
+annual_growth_house = st.number_input(
+     "What is your estimated annual growth in the home value?",
+     min_value=0.0, max_value=100.0, value=0.055)
 
-signing_bonus = st.number_input(
-     "What is the signing bonus?",
-     min_value=0, max_value=MAX_INT, value=50000)
+annual_growth_invest = st.number_input(
+     "What is your estimated annual growth by investing your money in the market?",
+     min_value=0.0, max_value=100.0, value=0.1)
 
-company_public_state = st.radio(
-     "Is the company public or private?",
-     ["Public", "Private"], index=0)
+monthly_rent_cost = st.number_input(
+     "What is your monthly cost in rent if you were to rent instead of buy?",
+     min_value=0, max_value=MAX_INT, value=2000)
 
-if company_public_state=="Private":
-    ipo_distance = st.number_input(
-     "In how many years will the company go public?",
-     min_value=0, max_value=1000, value=4
-     )
-else:
-    ipo_distance = 0
+monthly_rent_income = st.number_input(
+     "How much rent per month would you make from additional tenants?",
+     min_value=0, max_value=MAX_INT, value=2000)
 
-if company_public_state=="Private":
-    share_count = st.number_input(
-     "How many shares have you been awarded?",
-     min_value=0, max_value=MAX_INT, value=25000)
+time_period_evaluating = st.number_input(
+     "Up to  what year would you like to investigate your profit?",
+     min_value=0, max_value=MAX_INT, value=10)
 
-    strike_price = st.number_input(
-     "What is the strike price of your options?",
-     min_value=0, max_value=MAX_INT, value=5)
-    preferred_price = st.number_input(
-     "What is the preferred price of your options?",
-     min_value=0, max_value=MAX_INT, value=15)
+monthly_interest_rate = loan_interest_rate/12
+months_till_fully_paid = 12*loan_length
+monthly_mortgage_cost = loan_principal*(monthly_interest_rate*(1 + monthly_interest_rate)**months_till_fully_paid)/((1 + monthly_interest_rate)**months_till_fully_paid - 1)
 
-    # Someone on blind says 20% dilution each funding round, we will assume a new round of funding to increase valuation each year
-    yearly_dilution = st.number_input(
-     "What percentage of dilution do you imagine that you will have each year?",
-     min_value=float(0), max_value=float(100), value=0.15) 
+total_amount_owed_on_loan = loan_length*12*monthly_mortgage_cost
 
-    share_value = preferred_price*share_count
-    fair_market_share_value = strike_price*share_count
+house_state = st.radio(
+     "What state is the house in?",
+     property_tax_values.columns.tolist(), index=0)
 
-else:
-    yearly_dilution = float(0)
+# Assuming property tax is 
+annual_property_tax = property_tax_values[house_state].values[0]*0.01*house_value
 
-    share_value = st.number_input(
-     "What is the total value of shares you will receive over the vesting period?",
-     min_value=0, max_value=MAX_INT, value=300000)
+# How much you would save per month if you rented instead of buying
+monthly_income_from_renting_vs_buying = monthly_rent_cost - (monthly_rent_income - (monthly_mortgage_cost + annual_property_tax/12))
 
-vesting_length = st.number_input(
-     "How long is the vesting period for all of these shares (in years)?",
-     min_value=0, max_value=50, value=4)
-
-current_valuation = st.number_input(
-     "What is the current valuation of the company?",
-     min_value=0, max_value=MAX_INT, value=50000000000)
-
-# how many years in the future do you want to look at and whats your expected company price at those years
-# future_examination_len = st.number_input(
-#      "How many years into the future do you want to examine?",
-#      min_value=0, max_value=15)
-future_examination_len = vesting_length
-
-future_valuation = st.number_input(
-     "What is your estimated valuation of the company right after all of your shares vest?",
-     min_value=0, max_value=MAX_INT, value=50000000000)
+st.markdown(f"You would have {'${:,.2f}'.format(monthly_income_from_renting_vs_buying)} much money would you save per month if you rented instead of bought a house")
 
 
-def calculate_income_tax_amount(tax_table, income):
-    tax_total = 0
-    for _, row in tax_table.iterrows():
-        if income < row['end']:
-            tax_total += income*row['tax_rate']
-            income = 0
-        else:
-            tax_total += row['end']*row['tax_rate']
-            income = income - row['end']
-    return tax_total
+# Money you have if choosing to purchase house
+buying_house_output_data = pd.DataFrame()
+for i in range(1,time_period_evaluating+1):
+     new_house_value = house_value*(1+annual_growth_house)**i
+     new_monthly_rent_income = monthly_rent_income*(1+annual_growth_house)**(i-1)
+     mortgage_paid =  monthly_mortgage_cost*12*i
+     mortgage_left =  total_amount_owed_on_loan - mortgage_paid
+     total_tenant_rent_paid = 12*i*new_monthly_rent_income
+     total_property_taxes_paid = i*annual_property_tax
 
-def calculate_capital_gains_tax_amount(income, amount_to_be_taxed_on):
-    if 40400 < income and income <= 445850:
-        print("here it goes: ", amount_to_be_taxed_on*0.1)
-        return amount_to_be_taxed_on*0.15
-    if income > 445850:
-        return amount_to_be_taxed_on*0.2
-    return 0
-
-# If company grows 20% a year, then it's company_growth_rate = 1.2
-company_growth_rate = (future_valuation/current_valuation)**(1/future_examination_len)
-st.subheader(f"This assumes a growth rate of {company_growth_rate-1} per year")
-
-
-# if company is private you only pay taxes on difference in strike price
-# when company is public you owe taxes on full stock price (or preferred-strike)
-
-# you owe money on the increase in stock price since you executed it
-
-# Create Table with len(future_examination_len) and columns sorted by liquidity: real money, value selleable vested shares, non-sellable vested shares, unvested shared, execution cost, money from taxes
-output_table = pd.DataFrame()
-for yr in range(1, int(future_examination_len+1)):
-    dilution_amount = (1-yearly_dilution)**(yr)
-    new_equity_valuation = (share_value/vesting_length)*dilution_amount*(company_growth_rate**(yr))
-
-    yr_outcomes = pd.Series({
-        'yr': yr,
-        'real_money': base_salary + annual_bonus,
-        'real_money_post_fees': 0,
-        'sell-able_shares': 0,
-        'vested_unsell-able_shares': 0,
-        'unvested_shares': 0,
-        'execution_cost': 0,
-        'income_taxes_owed': 0,
-        'total_accumulated_stock_value': 0,
-        'capital_gains_taxes_owed': 0
-    })
-    # IPO has happened
-    if yr > ipo_distance:
-        yr_outcomes['sell-able_shares'] = new_equity_valuation
-    else:
-        yr_outcomes['vested_unsell-able_shares'] = new_equity_valuation
-
-    if yr == 1:
-        yr_outcomes['real_money'] += signing_bonus
-        prev_total_accumulated_stock_value = 0
-
-    if company_public_state=='Public':
-        taxable_stock_income = yr_outcomes['sell-able_shares']
-    else:
-        new_fair_market_equity_valuation = (fair_market_share_value/vesting_length)*dilution_amount*(company_growth_rate**(yr))
-        if yr <= ipo_distance:
-            taxable_stock_income = new_fair_market_equity_valuation - strike_price*(share_count/vesting_length)
-        else:
-            taxable_stock_income = new_equity_valuation - strike_price*(share_count/vesting_length)
-        yr_outcomes['execution_cost'] = strike_price*(share_count/vesting_length)
-    
-    yr_outcomes['unvested_shares'] = (share_value/vesting_length)*(vesting_length-yr)*dilution_amount*(company_growth_rate**(yr))
-    total_taxable_income = yr_outcomes['real_money'] + taxable_stock_income
-    yr_outcomes['income_taxes_owed'] = calculate_income_tax_amount(federal_income_tax_brackets, total_taxable_income)
-
-    yr_outcomes['real_money_post_fees'] = yr_outcomes['real_money'] - yr_outcomes['income_taxes_owed'] - yr_outcomes['execution_cost']
-
-    yr_outcomes['total_accumulated_stock_value'] = new_equity_valuation*yr
-
-    if company_public_state=='Public' or yr > ipo_distance:
-        print("Cap gains metrics for yr: ", yr)
-        print(yr_outcomes['total_accumulated_stock_value'])
-        print(new_equity_valuation)
-        print(prev_total_accumulated_stock_value)
-
-        print("VALUES", yr_outcomes['total_accumulated_stock_value'] - new_equity_valuation - prev_total_accumulated_stock_value)
+     buying_house_output_data = buying_house_output_data.append(pd.DataFrame({
+        'year': [i],
+        'total_downpayment': [downpayment],
+        'total_property_taxes_paid': [total_property_taxes_paid],
+        'total_tenant_rent_paid': [total_tenant_rent_paid],
+        'new_house_value': [new_house_value], 
+        'house_appreciation': [new_house_value-house_value],
+        'mortgage_paid': [mortgage_paid],
+        'mortgage_left': [mortgage_left],
+        }))
         
-        yr_outcomes['capital_gains_taxes_owed'] = calculate_capital_gains_tax_amount(yr_outcomes['real_money']+taxable_stock_income, 
-            yr_outcomes['total_accumulated_stock_value'] - new_equity_valuation - prev_total_accumulated_stock_value)
-    else:
-        # diff in preferred stock value - new_fair_market_equity_valuation
-        pref_stock_less_fmv_stock = new_equity_valuation - new_fair_market_equity_valuation
-        yr_outcomes['capital_gains_taxes_owed'] = calculate_capital_gains_tax_amount(yr_outcomes['real_money']+taxable_stock_income, 
-            yr_outcomes['total_accumulated_stock_value'] - new_equity_valuation - prev_total_accumulated_stock_value + pref_stock_less_fmv_stock)
+st.title(f"Buying a house")
 
-    prev_total_accumulated_stock_value = yr_outcomes['total_accumulated_stock_value']
+st.markdown(f"You owe {'${:,.2f}'.format(total_amount_owed_on_loan)} on your loan over {loan_length} years.")
+st.markdown(f"This is {'${:,.2f}'.format(monthly_mortgage_cost)} per month")
 
-    output_table = output_table.append(yr_outcomes, ignore_index=True)
+st.table(data=buying_house_output_data.set_index('year').style.format("${:,.2f}"))
 
-st.title("Company Yearly Compensation Breakdown")
-output_table.set_index('yr', inplace=True)
-st.table(data=output_table.style.format("${:,.2f}"))
+net_assets_left_when_buying = buying_house_output_data.tail(1)['new_house_value'].values[0] - buying_house_output_data.tail(1)['mortgage_left'].values[0]
+net_costs_payed_when_buying = downpayment + buying_house_output_data.tail(1)['total_property_taxes_paid'].values[0] + buying_house_output_data.tail(1)['mortgage_paid'].values[0] - buying_house_output_data.tail(1)['total_tenant_rent_paid'].values[0]
+
+st.subheader(f"Net Assets: ${net_assets_left_when_buying:,.2f}")
+st.subheader(f"Net Costs: ${net_costs_payed_when_buying:,.2f}")
 
 
-st.title(f"Company Aggregate Compensation Over {future_examination_len} Years")
-total_accumulated_base = output_table['real_money'].sum()
-total_accumulated_equity = output_table['total_accumulated_stock_value'].iloc[-1]
-total_base_less_fees_and_taxes = output_table['real_money_post_fees'].sum()
-capital_gains_taxes_owed_when_selling_all_shares = output_table['capital_gains_taxes_owed'].sum()
-total_taxes_already_payed = output_table['income_taxes_owed'].sum()
-total_execution_fees = output_table['execution_cost'].sum()
-st.table(data=pd.DataFrame({
-    'total_accumulated_base': [total_accumulated_base],
-    'total_accumulated_equity': [total_accumulated_equity],
-    'total_base_less_fees_and_taxes': [total_base_less_fees_and_taxes],
-    'capital_gains_taxes_owed_when_selling_all_shares': [capital_gains_taxes_owed_when_selling_all_shares],
-    'total_taxes_already_payed': [total_taxes_already_payed],
-    'total_execution_fees': [total_execution_fees]}).T.style.format("${:,.2f}"))
+st.title(f"Renting houses")
 
+# Money you have if choosing to rent
+total_value_in_saved_rent_with_investing = 0
+renting_house_output_data = pd.DataFrame()
+for i in range(1,time_period_evaluating+1):
+     new_monthly_rent_cost = monthly_rent_cost*(1+annual_growth_house)**(i-1)
+     total_rent_paid = new_monthly_rent_cost*12*i
+     value_of_downpayment_with_investing = downpayment*(1+annual_growth_invest)**i
+     total_in_saved_property_expenses = monthly_income_from_renting_vs_buying*12*i
+     this_year_accumulated_monthly_investment_gains = 0
+     for month in range(12):
+          this_year_accumulated_monthly_investment_gains += monthly_income_from_renting_vs_buying*(1+(annual_growth_invest*month)/12)
+     total_value_in_saved_rent_with_investing = this_year_accumulated_monthly_investment_gains + total_value_in_saved_rent_with_investing*(1+annual_growth_invest)
+     
+     renting_house_output_data = renting_house_output_data.append(pd.DataFrame({
+          'year': [i],
+          'total_rent_paid': [total_rent_paid],
+          'total_in_saved_property_expenses': [total_in_saved_property_expenses],
+          'value_of_downpayment_with_investing': [value_of_downpayment_with_investing],
+          'total_value_in_saved_rent_with_investing': [total_value_in_saved_rent_with_investing],
+          }))
 
-st.title(f"Total net wealth from this job after {future_examination_len} years (selling all shares and paying all taxes) is {'${:,.2f}'.format(total_base_less_fees_and_taxes+total_accumulated_equity-capital_gains_taxes_owed_when_selling_all_shares)}")
+st.table(data=renting_house_output_data.set_index('year').style.format("${:,.2f}"))
+
+net_assets_left_when_renting = renting_house_output_data.tail(1)['value_of_downpayment_with_investing'].values[0] + renting_house_output_data.tail(1)['total_value_in_saved_rent_with_investing'].values[0]
+net_costs_payed_when_renting = renting_house_output_data.tail(1)['total_rent_paid'].values[0]
+
+st.subheader(f"Net Assets: ${net_assets_left_when_renting:,.2f}")
+st.subheader(f"Net Costs: ${net_costs_payed_when_renting:,.2f}")

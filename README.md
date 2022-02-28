@@ -1,9 +1,11 @@
-# Company-Salary-Valuation
+# Should I Buy a House?
 
-This app is meant to help you value a company's total compensation and disambiguate the value of that company's stock grant. 
+This app is meant to help you determine whether or not buying a house is right for you. 
 
-A few caveats:
-- State income taxes are neglected, only federal income taxes are applied.
-- If the company is privately held and issues stock options, the app assumes that we will pay the tax on the difference between preferred and strike price when the shares are vested. In reality, an exercisor of the option would not owe taxes on this difference until the company either IPOs or is acquired.
+Some caveats:
+- This does not calculate income tax on your invested money, even though it does take property tax into account for purchasing a house.
+- Assumes property tax is stagnant over time and based on the value when you initially purchased the home.
+- This assumes that the rate of growth in rent prices is the same as the annual property value growth rate.
+- This also neglects maintanance costs for the house you buy
 
-The published app lives [here](https://share.streamlit.io/mochael/company-salary-valuation/main.py)
+The published app lives [here](https://share.streamlit.io/mochael/should-i-buy-a-house/main.py)
