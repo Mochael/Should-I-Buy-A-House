@@ -113,14 +113,16 @@ house_state = st.radio(
      "What state is the house in?",
      property_tax_values.columns.tolist(), index=0)
 
+is_married = st.radio(
+     "Are you married?",
+     ['Yes', 'No'], index=1)
+
+
 # Assuming property tax is 
 annual_property_tax = property_tax_values[house_state].values[0]*0.01*house_value
 
 # How much you would save per month if you rented instead of buying
-monthly_income_from_renting_vs_buying = monthly_rent_cost - (monthly_rent_income - (monthly_mortgage_cost + annual_property_tax/12))
-
-st.markdown(f"You would have {'${:,.2f}'.format(monthly_income_from_renting_vs_buying)} much money would you save per month if you rented instead of bought a house")
-
+monthly_income_from_renting_vs_buying = ((monthly_mortgage_cost + annual_property_tax/12) - monthly_rent_income) - monthly_rent_cost
 
 # Money you have if choosing to purchase house
 buying_house_output_data = pd.DataFrame()
@@ -128,6 +130,8 @@ for i in range(1,time_period_evaluating+1):
      new_house_value = house_value*(1+annual_growth_house)**i
      new_monthly_rent_income = monthly_rent_income*(1+annual_growth_house)**(i-1)
      mortgage_paid =  monthly_mortgage_cost*12*i
+     if mortgage_paid > total_amount_owed_on_loan:
+          mortgage_paid = total_amount_owed_on_loan
      mortgage_left =  total_amount_owed_on_loan - mortgage_paid
      total_tenant_rent_paid = 12*i*new_monthly_rent_income
      total_property_taxes_paid = i*annual_property_tax
@@ -138,20 +142,20 @@ for i in range(1,time_period_evaluating+1):
         'total_property_taxes_paid': [total_property_taxes_paid],
         'total_tenant_rent_paid': [total_tenant_rent_paid],
         'new_house_value': [new_house_value], 
-        'house_appreciation': [new_house_value-house_value],
-        'mortgage_paid': [mortgage_paid],
-        'mortgage_left': [mortgage_left],
+        'total_house_appreciation': [new_house_value-house_value],
+        'total_mortgage_paid': [mortgage_paid],
+        'total_mortgage_left': [mortgage_left],
         }))
         
 st.title(f"Buying a house")
 
 st.markdown(f"You owe {'${:,.2f}'.format(total_amount_owed_on_loan)} on your loan over {loan_length} years.")
-st.markdown(f"This is {'${:,.2f}'.format(monthly_mortgage_cost)} per month")
+st.markdown(f"- This is {'${:,.2f}'.format(monthly_mortgage_cost)} per month")
 
 st.table(data=buying_house_output_data.set_index('year').style.format("${:,.2f}"))
 
-net_assets_left_when_buying = buying_house_output_data.tail(1)['new_house_value'].values[0] - buying_house_output_data.tail(1)['mortgage_left'].values[0]
-net_costs_payed_when_buying = downpayment + buying_house_output_data.tail(1)['total_property_taxes_paid'].values[0] + buying_house_output_data.tail(1)['mortgage_paid'].values[0] - buying_house_output_data.tail(1)['total_tenant_rent_paid'].values[0]
+net_assets_left_when_buying = buying_house_output_data.tail(1)['new_house_value'].values[0] - buying_house_output_data.tail(1)['total_mortgage_left'].values[0]
+net_costs_payed_when_buying = downpayment + buying_house_output_data.tail(1)['total_property_taxes_paid'].values[0] + buying_house_output_data.tail(1)['total_mortgage_paid'].values[0] - buying_house_output_data.tail(1)['total_tenant_rent_paid'].values[0]
 
 st.subheader(f"Net Assets: ${net_assets_left_when_buying:,.2f}")
 st.subheader(f"Net Costs: ${net_costs_payed_when_buying:,.2f}")
@@ -187,3 +191,42 @@ net_costs_payed_when_renting = renting_house_output_data.tail(1)['total_rent_pai
 
 st.subheader(f"Net Assets: ${net_assets_left_when_renting:,.2f}")
 st.subheader(f"Net Costs: ${net_costs_payed_when_renting:,.2f}")
+
+def calculate_capital_gains_taxes(number, married):
+     # Assuming income is above 41,675 (if single) or 83,350 (if married) threshold for 0% tax
+     # thresh_1 = 41675
+     thresh_2 = 459750
+     if married:
+          # thresh_1 = 83350
+          thresh_2 = 517200
+     taxes_owed = 0
+     if number > thresh_2:
+          taxes_owed += 0.2*(number-thresh_2)
+          number = thresh_2
+     # if number > thresh_1:
+          # taxes_owed += 0.15*(number-thresh_1)    
+     taxes_owed += 0.15*number     
+     return taxes_owed
+
+st.title(f"Summary")
+
+st.subheader(f"Buying house")
+
+if is_married=='Yes':
+     house_sale_write_off_amount = min(buying_house_output_data.tail(1)['total_house_appreciation'].values[0], 500000)
+else:
+     house_sale_write_off_amount = min(buying_house_output_data.tail(1)['total_house_appreciation'].values[0], 250000)
+capital_gains_taxes_owed = calculate_capital_gains_taxes(buying_house_output_data.tail(1)['total_house_appreciation'].values[0]-house_sale_write_off_amount, is_married)
+
+st.markdown(f"Net gain in assets (after capital gains tax) for buying a house is ${(net_assets_left_when_buying-net_costs_payed_when_buying-capital_gains_taxes_owed):,.2f}.")
+st.markdown(f"- You would owe about ${capital_gains_taxes_owed:,.2f} in capital gains taxes when selling the house.")
+
+st.markdown(f"Your property appreciated by ${buying_house_output_data.tail(1)['total_house_appreciation'].values[0]:,.2f}.")
+st.markdown(f"You would need to pay off ${buying_house_output_data.tail(1)['total_mortgage_left'].values[0]:,.2f} on your mortgage.")
+
+st.subheader(f"Renting house")
+
+st.markdown(f"Net gain in assets (not including investment capital gains and income taxes) when renting a house is ${(net_assets_left_when_renting-net_costs_payed_when_renting):,.2f}.")
+st.markdown(f"You invested a total of {'${:,.2f}'.format(time_period_evaluating*12*monthly_income_from_renting_vs_buying+downpayment)} over {time_period_evaluating} years.")
+st.markdown(f"- {'${:,.2f}'.format(downpayment)} was from your downpayment.")
+st.markdown(f"- The remaining was from saving {'${:,.2f}'.format(monthly_income_from_renting_vs_buying)} per month if you rented instead of bought a house.")
