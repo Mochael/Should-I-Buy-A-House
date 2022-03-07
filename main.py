@@ -117,9 +117,21 @@ is_married = st.radio(
      "Are you married?",
      ['Yes', 'No'], index=1)
 
+# Itemized tax writeoffs should only be used if its greater than the standard deduction of around $12,500
+def calculate_loan_interest_tax_writeoff(loan_amount, loan_amount_with_interest, loan_length, time_period_evaluating):
+     loan_ceiling = 750000
+     loan_proportion = min(loan_ceiling/loan_amount, 1)
+     total_interest_to_write_off = (loan_amount_with_interest - loan_amount)*min(time_period_evaluating/loan_length, loan_proportion)
+     return total_interest_to_write_off
 
-# Assuming property tax is 
+def calculate_property_tax_writeoff(property_tax_owed, time_period_evaluating):
+     annual_prop_tax_writeoff_ceiling = 10000
+     return min(property_tax_owed, annual_prop_tax_writeoff_ceiling)*time_period_evaluating
+
+total_loan_to_writeoff = calculate_loan_interest_tax_writeoff(loan_principal, total_amount_owed_on_loan, loan_length, time_period_evaluating)
+
 annual_property_tax = property_tax_values[house_state].values[0]*0.01*house_value
+total_property_tax_writeoff = calculate_property_tax_writeoff(annual_property_tax, time_period_evaluating)
 
 # How much you would save per month if you rented instead of buying
 monthly_income_from_renting_vs_buying = ((monthly_mortgage_cost + annual_property_tax/12) - monthly_rent_income) - monthly_rent_cost
@@ -144,7 +156,7 @@ for i in range(1,time_period_evaluating+1):
         'new_house_value': [new_house_value], 
         'total_house_appreciation': [new_house_value-house_value],
         'total_mortgage_paid': [mortgage_paid],
-        'total_mortgage_left': [mortgage_left],
+        'total_mortgage_left': [mortgage_left]
         }))
         
 st.title(f"Buying a house")
@@ -224,9 +236,13 @@ st.markdown(f"- You would owe about ${capital_gains_taxes_owed:,.2f} in capital 
 st.markdown(f"Your property appreciated by ${buying_house_output_data.tail(1)['total_house_appreciation'].values[0]:,.2f}.")
 st.markdown(f"You would need to pay off ${buying_house_output_data.tail(1)['total_mortgage_left'].values[0]:,.2f} on your mortgage.")
 
+st.markdown(f"After {time_period_evaluating} years, you could write off a total of ${(total_loan_to_writeoff + total_property_tax_writeoff):,.2f} from property and mortgage interest taxes.")
+
 st.subheader(f"Renting house")
 
 st.markdown(f"Net gain in assets (not including investment capital gains and income taxes) when renting a house is ${(net_assets_left_when_renting-net_costs_payed_when_renting):,.2f}.")
 st.markdown(f"You invested a total of {'${:,.2f}'.format(time_period_evaluating*12*monthly_income_from_renting_vs_buying+downpayment)} over {time_period_evaluating} years.")
 st.markdown(f"- {'${:,.2f}'.format(downpayment)} was from your downpayment.")
 st.markdown(f"- The remaining was from saving {'${:,.2f}'.format(monthly_income_from_renting_vs_buying)} per month if you rented instead of bought a house.")
+
+st.markdown(f"Using standard deduction, after {time_period_evaluating} years, you could write off a total of ${(25100*time_period_evaluating if is_married else 12550*time_period_evaluating):,.2f} from property and mortgage interest taxes.")
