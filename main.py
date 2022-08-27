@@ -68,35 +68,40 @@ house_value = st.number_input(
      min_value=0, max_value=MAX_INT, value=1000000)
 
 downpayment_percent = st.number_input(
-     "What is the proportion of your downpayment for the house?",
-     min_value=0.0, max_value=1.0, value=0.2)
+     "What is the percentage of your downpayment for the house?",
+     min_value=0.0, max_value=100.0, value=20.0)
+downpayment_percent = downpayment_percent/100
 
 downpayment = downpayment_percent*house_value
 loan_principal = house_value - downpayment
 
 loan_interest_rate = st.number_input(
-     "What is the annual interest rate on the loan (assuming fixed)?",
-     min_value=0.0, max_value=1.0, value=0.04)
+     "What is the annual interest rate percentage on the loan (assuming fixed)?",
+     min_value=0.0, max_value=100.0, value=4.0)
+loan_interest_rate = loan_interest_rate/100
 
 loan_length = st.number_input(
      "How long is the loan for (in years)?",
      min_value=0, max_value=100, value=15)
 
 pmi = st.number_input(
-     "What is the primary mortgage insurance (PMI) rate for this loan per year (you stop paying PMI after getting 20 percent of your principle payed off)?",
-     min_value=0.0, max_value=1.0, value=0.01)
+     "What is the primary mortgage insurance (PMI) rate percentage for this loan per year (you stop paying PMI after getting 20 percent of your principle payed off)?",
+     min_value=0.0, max_value=100.0, value=1.0)
+pmi = pmi/100
 
 homeowners_insurance_amount = st.number_input(
      "How much in homeowners insurance do you owe per year (default is .35 percent of the value of the house per year)?",
      min_value=0, max_value=10000, value=int(house_value*0.0035))
 
 annual_growth_house = st.number_input(
-     "What is your estimated annual growth in the home value?",
-     min_value=0.0, max_value=100.0, value=0.055)
+     "What is your estimated annual growth percentage in the home value?",
+     min_value=0.0, max_value=100.0, value=5.0)
+annual_growth_house = annual_growth_house/100
 
 annual_growth_invest = st.number_input(
-     "What is your estimated annual growth by investing your money in the market?",
-     min_value=0.0, max_value=100.0, value=0.1)
+     "What is your estimated annual growth percentage by investing your money in the market?",
+     min_value=0.0, max_value=100.0, value=10.0)
+annual_growth_invest = annual_growth_invest/100
 
 monthly_rent_cost = st.number_input(
      "What is your monthly cost in rent if you were to rent instead of buy?",
@@ -154,15 +159,15 @@ total_pmi_payed = 0
 # Money you have if choosing to purchase house
 buying_house_output_data = pd.DataFrame()
 for i in range(1,time_period_evaluating+1):
-     new_house_value = house_value*(1+annual_growth_house)**i
+     new_house_value = house_value*(1+annual_growth_house)**(i-1)
      new_monthly_rent_income = monthly_rent_income*(1+annual_growth_house)**(i-1)
      mortgage_paid =  monthly_mortgage_cost*12*i
      if mortgage_paid > total_amount_owed_on_loan:
           mortgage_paid = total_amount_owed_on_loan
      mortgage_left =  total_amount_owed_on_loan - mortgage_paid
-     total_tenant_rent_paid += ((1+annual_growth_house)**i)*12*new_monthly_rent_income
-     total_property_taxes_paid += ((1+annual_growth_house)**i)*annual_property_tax
-     total_homeowners_insurance_paid += ((1+annual_growth_house)**i)*homeowners_insurance_amount
+     total_tenant_rent_paid += 12*new_monthly_rent_income
+     total_property_taxes_paid += ((1+annual_growth_house)**(i-1))*annual_property_tax
+     total_homeowners_insurance_paid += ((1+annual_growth_house)**(i-1))*homeowners_insurance_amount
      # If you've payed less than 20% of the principle on the loan, add PMI cost
      if principle_payed_so_far+downpayment < 0.2*house_value:
           total_pmi_payed += pmi*loan_principal
@@ -208,10 +213,11 @@ st.title(f"Renting houses")
 
 # Money you have if choosing to rent
 total_value_in_saved_rent_with_investing = 0
+total_rent_paid = 0
 renting_house_output_data = pd.DataFrame()
 for i in range(1,time_period_evaluating+1):
      new_monthly_rent_cost = monthly_rent_cost*(1+annual_growth_house)**(i-1)
-     total_rent_paid = new_monthly_rent_cost*12*i
+     total_rent_paid += new_monthly_rent_cost*12
      value_of_downpayment_with_investing = downpayment*(1+annual_growth_invest)**i
      total_in_saved_property_expenses = monthly_income_from_renting_vs_buying*12*i
      this_year_accumulated_monthly_investment_gains = 0
@@ -261,7 +267,7 @@ else:
      house_sale_write_off_amount = min(buying_house_output_data.tail(1)['total_house_appreciation'].values[0], 250000)
 capital_gains_taxes_owed = calculate_capital_gains_taxes(buying_house_output_data.tail(1)['total_house_appreciation'].values[0]-house_sale_write_off_amount, is_married)
 
-st.markdown(f"Net gain in assets (after capital gains tax) for buying a house is ${(net_assets_left_when_buying-net_costs_payed_when_buying-capital_gains_taxes_owed):,.2f}.")
+st.markdown(f"Net gain in assets (after capital gains tax) for buying a house is **${(net_assets_left_when_buying-net_costs_payed_when_buying-capital_gains_taxes_owed):,.2f}.**")
 st.markdown(f"- You would owe about ${capital_gains_taxes_owed:,.2f} in capital gains taxes when selling the house.")
 
 st.markdown(f"Your property appreciated by ${buying_house_output_data.tail(1)['total_house_appreciation'].values[0]:,.2f}.")
@@ -271,7 +277,7 @@ st.markdown(f"After {time_period_evaluating} years, you could write off a total 
 
 st.subheader(f"Renting house")
 
-st.markdown(f"Net gain in assets (not including investment capital gains and income taxes) when renting a house is ${(net_assets_left_when_renting-net_costs_payed_when_renting):,.2f}.")
+st.markdown(f"Net gain in assets (not including investment capital gains and income taxes) when renting a house is **${(net_assets_left_when_renting-net_costs_payed_when_renting):,.2f}**.")
 st.markdown(f"You invested a total of {'${:,.2f}'.format(time_period_evaluating*12*monthly_income_from_renting_vs_buying+downpayment)} over {time_period_evaluating} years.")
 st.markdown(f"- {'${:,.2f}'.format(downpayment)} was from your downpayment.")
 st.markdown(f"- The remaining was from saving {'${:,.2f}'.format(monthly_income_from_renting_vs_buying)} per month if you rented instead of bought a house.")
