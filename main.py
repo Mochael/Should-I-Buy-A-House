@@ -67,13 +67,12 @@ house_value = st.number_input(
      "What is the value of the house (in dollars)?",
      min_value=0, max_value=MAX_INT, value=1000000)
 
-downpayment = st.number_input(
-     "What is the downpayment for the house?",
-     min_value=0, max_value=MAX_INT, value=200000)
+downpayment_percent = st.number_input(
+     "What is the proportion of your downpayment for the house?",
+     min_value=0.0, max_value=1.0, value=0.2)
 
-loan_principal = st.number_input(
-     "How much money are you taking out a loan for?",
-     min_value=0, max_value=MAX_INT, value=800000)
+downpayment = downpayment_percent*house_value
+loan_principal = house_value - downpayment
 
 loan_interest_rate = st.number_input(
      "What is the annual interest rate on the loan (assuming fixed)?",
@@ -82,7 +81,15 @@ loan_interest_rate = st.number_input(
 loan_length = st.number_input(
      "How long is the loan for (in years)?",
      min_value=0, max_value=100, value=15)
-    
+
+pmi = st.number_input(
+     "What is the primary mortgage insurance (PMI) rate for this loan per year (you stop paying PMI after getting 20 percent of your principle payed off)?",
+     min_value=0.0, max_value=1.0, value=0.01)
+
+homeowners_insurance_amount = st.number_input(
+     "How much in homeowners insurance do you owe per year (default is .35 percent of the value of the house per year)?",
+     min_value=0, max_value=10000, value=int(house_value*0.0035))
+
 annual_growth_house = st.number_input(
      "What is your estimated annual growth in the home value?",
      min_value=0.0, max_value=100.0, value=0.055)
@@ -117,6 +124,7 @@ is_married = st.radio(
      "Are you married?",
      ['Yes', 'No'], index=1)
 
+
 # Itemized tax writeoffs should only be used if its greater than the standard deduction of around $12,500
 def calculate_loan_interest_tax_writeoff(loan_amount, loan_amount_with_interest, loan_length, time_period_evaluating):
      loan_ceiling = 750000
@@ -136,6 +144,13 @@ total_property_tax_writeoff = calculate_property_tax_writeoff(annual_property_ta
 # How much you would save per month if you rented instead of buying
 monthly_income_from_renting_vs_buying = ((monthly_mortgage_cost + annual_property_tax/12) - monthly_rent_income) - monthly_rent_cost
 
+total_tenant_rent_paid = 0
+total_property_taxes_paid = 0
+total_homeowners_insurance_paid = 0
+principle_payed_so_far = 0
+interest_payed_so_far = 0
+total_pmi_payed = 0
+
 # Money you have if choosing to purchase house
 buying_house_output_data = pd.DataFrame()
 for i in range(1,time_period_evaluating+1):
@@ -145,18 +160,33 @@ for i in range(1,time_period_evaluating+1):
      if mortgage_paid > total_amount_owed_on_loan:
           mortgage_paid = total_amount_owed_on_loan
      mortgage_left =  total_amount_owed_on_loan - mortgage_paid
-     total_tenant_rent_paid = 12*i*new_monthly_rent_income
-     total_property_taxes_paid = i*annual_property_tax
+     total_tenant_rent_paid += ((1+annual_growth_house)**i)*12*new_monthly_rent_income
+     total_property_taxes_paid += ((1+annual_growth_house)**i)*annual_property_tax
+     total_homeowners_insurance_paid += ((1+annual_growth_house)**i)*homeowners_insurance_amount
+     # If you've payed less than 20% of the principle on the loan, add PMI cost
+     if principle_payed_so_far+downpayment < 0.2*house_value:
+          total_pmi_payed += pmi*loan_principal
+
+     # Calculate amount of interest and principle payed off so far
+     for m in range(0, 12):
+          interest_payment_this_month = (loan_principal - principle_payed_so_far)*monthly_interest_rate
+          principle_payment_this_month = monthly_mortgage_cost - interest_payment_this_month
+          principle_payed_so_far += principle_payment_this_month
+          interest_payed_so_far += interest_payment_this_month
 
      buying_house_output_data = buying_house_output_data.append(pd.DataFrame({
         'year': [i],
         'total_downpayment': [downpayment],
         'total_property_taxes_paid': [total_property_taxes_paid],
+        'total_homeowners_insurance_paid': [total_homeowners_insurance_paid],
+        'total_pmi_payed': [total_pmi_payed],
         'total_tenant_rent_paid': [total_tenant_rent_paid],
         'new_house_value': [new_house_value], 
         'total_house_appreciation': [new_house_value-house_value],
         'total_mortgage_paid': [mortgage_paid],
-        'total_mortgage_left': [mortgage_left]
+        'total_mortgage_left': [mortgage_left],
+        'principle_payed_so_far': [principle_payed_so_far],
+        'interest_payed_so_far': [interest_payed_so_far]
         }))
         
 st.title(f"Buying a house")
@@ -167,7 +197,7 @@ st.markdown(f"- This is {'${:,.2f}'.format(monthly_mortgage_cost)} per month")
 st.table(data=buying_house_output_data.set_index('year').style.format("${:,.2f}"))
 
 net_assets_left_when_buying = buying_house_output_data.tail(1)['new_house_value'].values[0] - buying_house_output_data.tail(1)['total_mortgage_left'].values[0]
-net_costs_payed_when_buying = downpayment + buying_house_output_data.tail(1)['total_property_taxes_paid'].values[0] + buying_house_output_data.tail(1)['total_mortgage_paid'].values[0] - buying_house_output_data.tail(1)['total_tenant_rent_paid'].values[0]
+net_costs_payed_when_buying = downpayment + buying_house_output_data.tail(1)['total_property_taxes_paid'].values[0] + buying_house_output_data.tail(1)['total_homeowners_insurance_paid'].values[0] + buying_house_output_data.tail(1)['total_pmi_payed'].values[0] + buying_house_output_data.tail(1)['total_mortgage_paid'].values[0] - buying_house_output_data.tail(1)['total_tenant_rent_paid'].values[0]
 
 st.subheader(f"Net Assets: ${net_assets_left_when_buying:,.2f}")
 st.subheader(f"Net Costs: ${net_costs_payed_when_buying:,.2f}")
@@ -245,4 +275,4 @@ st.markdown(f"You invested a total of {'${:,.2f}'.format(time_period_evaluating*
 st.markdown(f"- {'${:,.2f}'.format(downpayment)} was from your downpayment.")
 st.markdown(f"- The remaining was from saving {'${:,.2f}'.format(monthly_income_from_renting_vs_buying)} per month if you rented instead of bought a house.")
 
-st.markdown(f"Using standard deduction, after {time_period_evaluating} years, you could write off a total of ${(25100*time_period_evaluating if is_married else 12550*time_period_evaluating):,.2f} from property and mortgage interest taxes.")
+st.markdown(f"Using standard deduction, after {time_period_evaluating} years, you could write off a total of ${(25100*time_period_evaluating if is_married else 12550*time_period_evaluating):,.2f}.")
