@@ -196,10 +196,11 @@ st.markdown(f"- This is {'${:,.2f}'.format(monthly_mortgage_cost)} per month")
 
 st.table(data=buying_house_output_data.set_index('year').style.format("${:,.2f}"))
 
-net_assets_left_when_buying = buying_house_output_data.tail(1)['new_house_value'].values[0] - buying_house_output_data.tail(1)['total_mortgage_left'].values[0]
-net_costs_payed_when_buying = downpayment + buying_house_output_data.tail(1)['total_property_taxes_paid'].values[0] + buying_house_output_data.tail(1)['total_homeowners_insurance_paid'].values[0] + buying_house_output_data.tail(1)['total_pmi_payed'].values[0] + buying_house_output_data.tail(1)['total_mortgage_paid'].values[0] - buying_house_output_data.tail(1)['total_tenant_rent_paid'].values[0]
+net_assets_left_when_buying = buying_house_output_data.tail(1)['new_house_value'].values[0] - buying_house_output_data.tail(1)['total_mortgage_left'].values[0] + buying_house_output_data.tail(1)['total_tenant_rent_paid'].values[0]
+net_costs_payed_when_buying = downpayment + buying_house_output_data.tail(1)['total_property_taxes_paid'].values[0] + buying_house_output_data.tail(1)['total_homeowners_insurance_paid'].values[0] + buying_house_output_data.tail(1)['total_pmi_payed'].values[0] + buying_house_output_data.tail(1)['total_mortgage_paid'].values[0]
 
 st.subheader(f"Net Assets: ${net_assets_left_when_buying:,.2f}")
+st.markdown(f"- Includes the {'${:,.2f}'.format(buying_house_output_data.tail(1)['total_tenant_rent_paid'].values[0])} you made over this time from tenants paying rent")
 st.subheader(f"Net Costs: ${net_costs_payed_when_buying:,.2f}")
 
 
