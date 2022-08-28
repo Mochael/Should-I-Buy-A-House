@@ -115,6 +115,24 @@ time_period_evaluating = st.number_input(
      "Up to  what year would you like to investigate your profit?",
      min_value=0, max_value=MAX_INT, value=10)
 
+# Arguments to Compare: Start
+downpayment_percent_to_compare = st.number_input(
+     "What downpayment percentage would you like to compare?",
+     min_value=0.0, max_value=100.0, value=5.0)
+downpayment_percent_to_compare = downpayment_percent_to_compare/100
+downpayment_to_compare = downpayment_percent_to_compare*house_value
+
+loan_interest_rate_to_compare = st.number_input(
+     "What interest rate percentage would you like to compare?",
+     min_value=0.0, max_value=100.0, value=8.0)
+
+loan_interest_rate_to_compare = loan_interest_rate_to_compare/100
+loan_principal_to_compare = house_value - downpayment_to_compare
+monthly_interest_rate_to_compare = loan_interest_rate_to_compare/12
+months_till_fully_paid_to_compare = 12*loan_length
+monthly_mortgage_cost_to_compare = loan_principal_to_compare*(monthly_interest_rate_to_compare*(1 + monthly_interest_rate_to_compare)**months_till_fully_paid_to_compare)/((1 + monthly_interest_rate_to_compare)**months_till_fully_paid_to_compare - 1)
+# Arguments to Compare: End
+
 monthly_interest_rate = loan_interest_rate/12
 months_till_fully_paid = 12*loan_length
 monthly_mortgage_cost = loan_principal*(monthly_interest_rate*(1 + monthly_interest_rate)**months_till_fully_paid)/((1 + monthly_interest_rate)**months_till_fully_paid - 1)
@@ -220,10 +238,7 @@ for i in range(1,time_period_evaluating+1):
      total_rent_paid += new_monthly_rent_cost*12
      value_of_downpayment_with_investing = downpayment*(1+annual_growth_invest)**i
      total_in_saved_property_expenses = monthly_income_from_renting_vs_buying*12*i
-     this_year_accumulated_monthly_investment_gains = 0
-     for month in range(12):
-          this_year_accumulated_monthly_investment_gains += monthly_income_from_renting_vs_buying*(1+(annual_growth_invest*month)/12)
-     total_value_in_saved_rent_with_investing = this_year_accumulated_monthly_investment_gains + total_value_in_saved_rent_with_investing*(1+annual_growth_invest)
+     total_value_in_saved_rent_with_investing = (total_in_saved_property_expenses + total_value_in_saved_rent_with_investing)*(1+annual_growth_invest)
      
      renting_house_output_data = renting_house_output_data.append(pd.DataFrame({
           'year': [i],
@@ -283,3 +298,31 @@ st.markdown(f"- {'${:,.2f}'.format(downpayment)} was from your downpayment.")
 st.markdown(f"- The remaining was from saving {'${:,.2f}'.format(monthly_income_from_renting_vs_buying)} per month if you rented instead of bought a house.")
 
 st.markdown(f"Using standard deduction, after {time_period_evaluating} years, you could write off a total of ${(25100*time_period_evaluating if is_married else 12550*time_period_evaluating):,.2f}.")
+
+
+
+st.subheader(f"Money from Comparing Downpayments and Interest Rates")
+st.markdown(f"- {'${:,.2f}'.format(downpayment)} is original downpayment.")
+st.markdown(f"- {'${:,.2f}'.format(downpayment_to_compare)} is new comparison downpayment.")
+
+st.markdown(f"- {'${:,.2f}'.format(monthly_mortgage_cost)} is monthly mortage.")
+st.markdown(f"- {'${:,.2f}'.format(monthly_mortgage_cost_to_compare)} is new monthly comparison mortgage.")
+
+# TODO: Add difference of PMI
+value_of_downpayment_difference_with_investing = 0
+value_of_interest_difference_with_investing = 0
+interest_comparison_table = pd.DataFrame()
+for t in range(1,time_period_evaluating+1):
+     value_of_downpayment_difference_with_investing = (downpayment - downpayment_to_compare)*(1+annual_growth_invest)**t
+     value_of_interest_difference_with_investing = (value_of_interest_difference_with_investing + (12*(monthly_mortgage_cost - monthly_mortgage_cost_to_compare)))*(1+annual_growth_invest)
+
+     interest_comparison_table = interest_comparison_table.append(pd.DataFrame({
+          'year': [t],
+          'value_of_downpayment_difference_after_investing': [value_of_downpayment_difference_with_investing],
+          'value_of_interest_difference_after_investing': [value_of_interest_difference_with_investing]
+          }))
+
+st.table(data=interest_comparison_table.set_index('year').style.format("${:,.2f}"))
+
+st.subheader(f"Net Income from Downpayment Difference: ${interest_comparison_table.tail(1)['value_of_downpayment_difference_after_investing'].values[0]:,.2f}")
+st.subheader(f"Net Income from Interest Difference: ${interest_comparison_table.tail(1)['value_of_interest_difference_after_investing'].values[0]:,.2f}")
