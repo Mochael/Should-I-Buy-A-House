@@ -139,9 +139,13 @@ monthly_mortgage_cost = loan_principal*(monthly_interest_rate*(1 + monthly_inter
 
 total_amount_owed_on_loan = loan_length*12*monthly_mortgage_cost
 
-house_state = st.radio(
+
+house_state = st.selectbox(
      "What state is the house in?",
-     property_tax_values.columns.tolist(), index=0)
+     sorted(property_tax_values.columns.tolist()),
+     index=0
+     )
+
 
 is_married = st.radio(
      "Are you married?",
@@ -197,20 +201,23 @@ for i in range(1,time_period_evaluating+1):
           principle_payed_so_far += principle_payment_this_month
           interest_payed_so_far += interest_payment_this_month
 
-     buying_house_output_data = buying_house_output_data.append(pd.DataFrame({
-        'year': [i],
-        'total_downpayment': [downpayment],
-        'total_property_taxes_paid': [total_property_taxes_paid],
-        'total_homeowners_insurance_paid': [total_homeowners_insurance_paid],
-        'total_pmi_payed': [total_pmi_payed],
-        'total_tenant_rent_paid': [total_tenant_rent_paid],
-        'new_house_value': [new_house_value], 
-        'total_house_appreciation': [new_house_value-house_value],
-        'total_mortgage_paid': [mortgage_paid],
-        'total_mortgage_left': [mortgage_left],
-        'principle_payed_so_far': [principle_payed_so_far],
-        'interest_payed_so_far': [interest_payed_so_far]
-        }))
+     buying_house_output_data = pd.concat([
+          buying_house_output_data, 
+          pd.DataFrame({
+          'year': [i],
+          'total_downpayment': [downpayment],
+          'total_property_taxes_paid': [total_property_taxes_paid],
+          'total_homeowners_insurance_paid': [total_homeowners_insurance_paid],
+          'total_pmi_payed': [total_pmi_payed],
+          'total_tenant_rent_paid': [total_tenant_rent_paid],
+          'new_house_value': [new_house_value], 
+          'total_house_appreciation': [new_house_value-house_value],
+          'total_mortgage_paid': [mortgage_paid],
+          'total_mortgage_left': [mortgage_left],
+          'principle_payed_so_far': [principle_payed_so_far],
+          'interest_payed_so_far': [interest_payed_so_far]
+          })
+     ])
         
 st.title(f"Buying a house")
 
@@ -218,6 +225,13 @@ st.markdown(f"You owe {'${:,.2f}'.format(total_amount_owed_on_loan)} on your loa
 st.markdown(f"- This is {'${:,.2f}'.format(monthly_mortgage_cost)} per month")
 
 st.table(data=buying_house_output_data.set_index('year').style.format("${:,.2f}"))
+
+st.download_button(
+     label="Download data as CSV",
+     data=buying_house_output_data.set_index('year').to_csv().encode('utf-8'),
+     file_name='real_estate_cash_flow_over_time.csv',
+     mime='text/csv',
+ )
 
 net_assets_left_when_buying = buying_house_output_data.tail(1)['new_house_value'].values[0] - buying_house_output_data.tail(1)['total_mortgage_left'].values[0] + buying_house_output_data.tail(1)['total_tenant_rent_paid'].values[0]
 net_costs_payed_when_buying = downpayment + buying_house_output_data.tail(1)['total_property_taxes_paid'].values[0] + buying_house_output_data.tail(1)['total_homeowners_insurance_paid'].values[0] + buying_house_output_data.tail(1)['total_pmi_payed'].values[0] + buying_house_output_data.tail(1)['total_mortgage_paid'].values[0]
@@ -240,13 +254,16 @@ for i in range(1,time_period_evaluating+1):
      total_in_saved_property_expenses = monthly_income_from_renting_vs_buying*12*i
      total_value_in_saved_rent_with_investing = (total_in_saved_property_expenses + total_value_in_saved_rent_with_investing)*(1+annual_growth_invest)
      
-     renting_house_output_data = renting_house_output_data.append(pd.DataFrame({
-          'year': [i],
-          'total_rent_paid': [total_rent_paid],
-          'total_in_saved_property_expenses': [total_in_saved_property_expenses],
-          'value_of_downpayment_with_investing': [value_of_downpayment_with_investing],
-          'total_value_in_saved_rent_with_investing': [total_value_in_saved_rent_with_investing],
-          }))
+     renting_house_output_data = pd.concat([
+          renting_house_output_data, 
+          pd.DataFrame({
+               'year': [i],
+               'total_rent_paid': [total_rent_paid],
+               'total_in_saved_property_expenses': [total_in_saved_property_expenses],
+               'value_of_downpayment_with_investing': [value_of_downpayment_with_investing],
+               'total_value_in_saved_rent_with_investing': [total_value_in_saved_rent_with_investing],
+          })
+     ])
 
 st.table(data=renting_house_output_data.set_index('year').style.format("${:,.2f}"))
 
@@ -316,11 +333,14 @@ for t in range(1,time_period_evaluating+1):
      value_of_downpayment_difference_with_investing = (downpayment - downpayment_to_compare)*(1+annual_growth_invest)**t
      value_of_interest_difference_with_investing = (value_of_interest_difference_with_investing + (12*(monthly_mortgage_cost - monthly_mortgage_cost_to_compare)))*(1+annual_growth_invest)
 
-     interest_comparison_table = interest_comparison_table.append(pd.DataFrame({
-          'year': [t],
-          'value_of_downpayment_difference_after_investing': [value_of_downpayment_difference_with_investing],
-          'value_of_interest_difference_after_investing': [value_of_interest_difference_with_investing]
-          }))
+     interest_comparison_table = pd.concat([
+          interest_comparison_table, 
+          pd.DataFrame({
+               'year': [t],
+               'value_of_downpayment_difference_after_investing': [value_of_downpayment_difference_with_investing],
+               'value_of_interest_difference_after_investing': [value_of_interest_difference_with_investing]
+          })
+     ])
 
 st.table(data=interest_comparison_table.set_index('year').style.format("${:,.2f}"))
 
