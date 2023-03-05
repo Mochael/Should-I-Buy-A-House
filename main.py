@@ -6,7 +6,7 @@ import numpy as np
 
 from tax_calculation import MAX_INT, property_tax_values, calculate_income_tax_amount, calculate_capital_gains_tax_amount, calculate_loan_interest_tax_writeoff, calculate_property_tax_writeoff
 
-st.title("Should I Buy a House Calculator")
+st.title("Should I Buy the House Calculator")
 
 house_value = st.number_input(
      "What is the value of the house (in dollars)?",
@@ -70,6 +70,11 @@ annual_income = st.number_input(
      "What is your annual income?",
      min_value=0, max_value=MAX_INT, value=100000)
 
+money_available_for_downpayment = st.number_input(
+     "How much money do you have in savings that you could use for your downpayment, that you would otherwise invest?",
+     min_value=0, max_value=MAX_INT, value=200000)
+money_available_for_downpayment_less_downpayment = money_available_for_downpayment - downpayment
+
 filing_status = st.radio(
      "How will you be filing your taxes?",
      ["Single", "Married"], index=0)
@@ -122,6 +127,7 @@ for i in range(1,time_period_evaluating+1):
      # Calculate amount of interest and principle payed off so far
      interest_paid_this_year = 0
      principal_paid_this_year = 0
+     pmi_payed_this_year = 0
      for m in range(0, 12):
           interest_payment_this_month = (loan_principal - total_principle_payed_so_far)*monthly_interest_rate
           principle_payment_this_month = monthly_mortgage_cost - interest_payment_this_month
@@ -131,7 +137,8 @@ for i in range(1,time_period_evaluating+1):
           total_principle_payed_so_far += principle_payment_this_month
           # If you've payed less than 20% of the principle on the loan, add PMI cost (which is about 0.1% – 2% of your loan amount per year)
           if total_principle_payed_so_far+downpayment < 0.2*house_value:
-               total_pmi_payed += pmi*loan_principal
+               total_pmi_payed += (pmi/12)*loan_principal
+               pmi_payed_this_year += (pmi/12)*loan_principal
 
      # Mortgages will always be in full years, so we don't have to worry about edge case with a mortgage lasting 10.5 years.
      total_mortgage_paid =  monthly_mortgage_cost*12*i
@@ -143,7 +150,7 @@ for i in range(1,time_period_evaluating+1):
      total_property_taxes_paid += ((1+annual_growth_house)**(i-1))*annual_property_tax
      total_homeowners_insurance_paid += ((1+annual_growth_house)**(i-1))*homeowners_insurance_amount
 
-     loan_interest_to_write_off = calculate_loan_interest_tax_writeoff(loan_principal, interest_paid_this_year)
+     loan_interest_to_write_off = calculate_loan_interest_tax_writeoff(total_amount_owed_on_loan, interest_paid_this_year) + pmi_payed_this_year
      property_tax_to_write_off = calculate_property_tax_writeoff(((1+annual_growth_house)**(i-1))*annual_property_tax)
      total_loan_interest_to_write_off += loan_interest_to_write_off
      total_property_tax_to_write_off += property_tax_to_write_off
@@ -151,15 +158,17 @@ for i in range(1,time_period_evaluating+1):
      # Calculations for if you didn't buy your house and rented instead
      total_rent_paid += new_monthly_rent_cost*12
      value_of_downpayment_with_investing = downpayment*(1+annual_growth_invest)**i
+     value_of_money_available_for_downpayment_with_investing = money_available_for_downpayment*(1+annual_growth_invest)**i
+     value_of_money_available_for_downpayment_less_downpayment_with_investing = money_available_for_downpayment_less_downpayment*(1+annual_growth_invest)**i
 
      # Calculate taxes for if you were to buy a house. You can write off a certain amount of gains from your house sale (shown below)
      annual_income_tax_owed_if_buying = calculate_income_tax_amount(annual_income+12*new_monthly_rent_income, house_state, filing_status, loan_interest_to_write_off+property_tax_to_write_off)
-     capital_gains_tax_if_buying = calculate_capital_gains_tax_amount(annual_income, max((new_house_value-house_value) - house_sale_write_off_amount, 0) + total_buy_vs_rent_gains, house_state, filing_status)
+     capital_gains_tax_if_buying = calculate_capital_gains_tax_amount(annual_income, max((new_house_value-house_value) - house_sale_write_off_amount, 0) + total_buy_vs_rent_gains + (value_of_money_available_for_downpayment_less_downpayment_with_investing - money_available_for_downpayment_less_downpayment), house_state, filing_status)
      total_income_tax_owed_if_buying += annual_income_tax_owed_if_buying
 
      # Calculate taxes for if you were to rent a house
      annual_income_tax_owed_if_renting = calculate_income_tax_amount(annual_income, house_state, filing_status)
-     capital_gains_tax_if_renting = calculate_capital_gains_tax_amount(annual_income, total_rent_vs_buy_gains + value_of_downpayment_with_investing - downpayment, house_state, filing_status)
+     capital_gains_tax_if_renting = calculate_capital_gains_tax_amount(annual_income, total_rent_vs_buy_gains + value_of_money_available_for_downpayment_with_investing - money_available_for_downpayment, house_state, filing_status)
      total_income_tax_owed_if_renting += annual_income_tax_owed_if_renting
 
      # New values with appreciation of property
@@ -188,28 +197,34 @@ for i in range(1,time_period_evaluating+1):
           buying_house_output_data, 
           pd.DataFrame({
           'year': [i],
-          'total_downpayment': [downpayment],
+          'new_house_value': [new_house_value],
+          'total_value_of_money_in_savings_if_renting': [value_of_money_available_for_downpayment_with_investing],
+          'total_value_of_money_in_savings_if_buying': [value_of_money_available_for_downpayment_less_downpayment_with_investing],
+          'total_rent_vs_buy_gains': [total_rent_vs_buy_gains],
+          'total_buy_vs_rent_gains': [total_buy_vs_rent_gains],
           'total_property_taxes_paid': [total_property_taxes_paid],
           'total_homeowners_insurance_paid': [total_homeowners_insurance_paid],
           'total_pmi_payed': [total_pmi_payed],
           'total_tenant_rent_paid': [total_tenant_rent_paid],
-          'new_house_value': [new_house_value], 
-          'total_house_appreciation': [new_house_value-house_value],
-          'total_mortgage_paid': [total_mortgage_paid],
-          'total_mortgage_left': [total_mortgage_left],
-          'total_principle_payed_so_far': [total_principle_payed_so_far],
-          'total_interest_payed_so_far': [total_interest_payed_so_far],
           'total_loan_interest_to_write_off': [total_loan_interest_to_write_off],
           'total_property_tax_to_write_off': [total_property_tax_to_write_off],
           'total_income_tax_owed_if_buying': [total_income_tax_owed_if_buying],
           'total_income_tax_owed_if_renting': [total_income_tax_owed_if_renting],
           'total_capital_gains_tax_owed_if_buying': [capital_gains_tax_if_buying],
           'total_capital_gains_tax_owed_if_renting': [capital_gains_tax_if_renting],
+          'total_income': [annual_income*i],
+          'total_rent_paid': [total_rent_paid],
+          'total_mortgage_paid': [total_mortgage_paid],
+          'total_mortgage_left': [total_mortgage_left],
+          'total_principle_payed_so_far': [total_principle_payed_so_far],
+          'total_interest_payed_so_far': [total_interest_payed_so_far]
           })
      ])
 
-net_worth_if_renting = value_of_downpayment_with_investing + total_rent_vs_buy_gains + annual_income*time_period_evaluating - total_rent_paid - capital_gains_tax_if_renting - total_income_tax_owed_if_renting
-net_worth_if_buying = new_house_value + total_buy_vs_rent_gains + total_tenant_rent_paid + annual_income*time_period_evaluating - downpayment - total_amount_owed_on_loan - capital_gains_tax_if_buying - total_income_tax_owed_if_buying - total_property_taxes_paid - total_homeowners_insurance_paid
+remaining_loan_interest_to_write_off = calculate_loan_interest_tax_writeoff(total_amount_owed_on_loan, total_amount_owed_on_loan - loan_principal - total_interest_payed_so_far)
+
+net_worth_if_renting = value_of_money_available_for_downpayment_with_investing + total_rent_vs_buy_gains + annual_income*time_period_evaluating - total_rent_paid - capital_gains_tax_if_renting - total_income_tax_owed_if_renting
+net_worth_if_buying = value_of_money_available_for_downpayment_less_downpayment_with_investing + new_house_value + total_buy_vs_rent_gains + total_tenant_rent_paid + annual_income*time_period_evaluating - downpayment - total_amount_owed_on_loan - capital_gains_tax_if_buying - total_income_tax_owed_if_buying - total_property_taxes_paid - total_homeowners_insurance_paid - total_pmi_payed
 
 st.title(f"Net worth")
 st.markdown(f"If you buy a house, your net worth after {time_period_evaluating} years will be {'${:,.2f}'.format(net_worth_if_buying)}.")
@@ -222,6 +237,7 @@ st.markdown(f"- Gains from difference in annual income: {'${:,.2f}'.format(total
 st.markdown(f"- Income from tenant rent: {'${:,.2f}'.format(total_tenant_rent_paid)}.")
 st.markdown(f"- Income taxes: {'${:,.2f}'.format(total_income_tax_owed_if_buying)}.")
 st.markdown(f"- Capital gains taxes: {'${:,.2f}'.format(capital_gains_tax_if_buying)}.")
+st.markdown(f"- Remaining loan interest to write off: {'${:,.2f}'.format(remaining_loan_interest_to_write_off)}.")
 
 
 st.title(f"Renting a house")

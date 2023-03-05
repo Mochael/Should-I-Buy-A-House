@@ -121,6 +121,7 @@ def calculate_capital_gains_tax_amount(income, amount_to_be_taxed_on, state, fil
 
 # Itemized tax writeoffs should only be used if its greater than the standard deduction of around $12,500
 # You can deduct the mortgage interest you paid during the tax year on the first $750,000 of your mortgage debt.
+# Notes: PMI is also deductable, check if writeoff limit of 750K applies to interest+prinicipal or just principal (I think it's total amount you owe), appl
 def calculate_loan_interest_tax_writeoff(loan_amount, interest_paid):
      loan_ceiling = 750000
      loan_proportion = min(loan_ceiling/loan_amount, 1)
