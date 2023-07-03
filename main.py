@@ -38,6 +38,16 @@ homeowners_insurance_amount = st.number_input(
      "How much in homeowners insurance do you owe per year (default is .35 percent of the value of the house per year)?",
      min_value=0, max_value=10000, value=int(house_value*0.0035))
 
+buying_costs = st.number_input(
+     "What are the closing costs you expect to pay as a buyer?",
+     min_value=0, max_value=1000000, value=int(house_value*0.035))
+# Lump closing buying costs in down payment
+downpayment += buying_costs
+
+selling_costs = st.number_input(
+     "What are the closing costs you expect to pay as a seller?",
+     min_value=0, max_value=1000000, value=int(house_value*0.08))
+
 annual_growth_house = st.number_input(
      "What is your estimated annual growth percentage in the home value (calculations assume rent costs rise at this rate as well)?",
      min_value=0.0, max_value=100.0, value=5.0)
@@ -224,7 +234,8 @@ for i in range(1,time_period_evaluating+1):
 remaining_loan_interest_to_write_off = calculate_loan_interest_tax_writeoff(total_amount_owed_on_loan, total_amount_owed_on_loan - loan_principal - total_interest_payed_so_far)
 
 net_worth_if_renting = value_of_money_available_for_downpayment_with_investing + total_rent_vs_buy_gains + annual_income*time_period_evaluating - total_rent_paid - capital_gains_tax_if_renting - total_income_tax_owed_if_renting
-net_worth_if_buying = value_of_money_available_for_downpayment_less_downpayment_with_investing + new_house_value + total_buy_vs_rent_gains + total_tenant_rent_paid + annual_income*time_period_evaluating - downpayment - total_amount_owed_on_loan - capital_gains_tax_if_buying - total_income_tax_owed_if_buying - total_property_taxes_paid - total_homeowners_insurance_paid - total_pmi_payed
+net_worth_if_buying = value_of_money_available_for_downpayment_less_downpayment_with_investing + new_house_value + total_buy_vs_rent_gains + total_tenant_rent_paid + annual_income*time_period_evaluating - downpayment - capital_gains_tax_if_buying - total_income_tax_owed_if_buying - total_property_taxes_paid - total_homeowners_insurance_paid - total_pmi_payed - selling_costs - (total_mortgage_paid + (loan_principal - total_principle_payed_so_far))
+
 
 st.title(f"Net worth")
 st.markdown(f"If you buy a house, your net worth after {time_period_evaluating} years will be {'${:,.2f}'.format(net_worth_if_buying)}.")
